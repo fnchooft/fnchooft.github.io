@@ -1,0 +1,10 @@
+= Blog Articles
+:sectnums:
+:toc: left
+:toclevels: 3
+//:data-uri:
+
+:toc!:
+
+== Blogging with Github Pages and Asciidoc
+http://fnchooft.github.io/Blog/20171207-asciidoc

@@ -1,0 +1,35 @@
+= fnchooft.github.io
+:author: Fabian van 't Hooft
+:email: <fnchooft@gmail.com>
+:revnumber: 0.9.0
+:revdate: 2017-12-07
+:revremark: Asciidoc is the coolest
+
+Personal page with projects, tid-bits, blog-entries etc.
+
+
+== Todo-list
+
+Following is my planned todo-list
+
+=== Completed
+* [*] mustache-c
+* [*] redis
+* [*] angular-formly
+* [*] nginx
+
+=== Current
+* [*] asciidoc
+* [ ] high-level-design documentation
+
+=== Planned
+* [ ] Erlang
+* [ ] Elixir
+* [ ] Phoenix
+* [ ] Elm
+* [ ] Redis Machine Learning
+
+== Site Links
+* http://fnchooft.github.io/Blog[Blog]
+* http://fnchooft.github.io/Tools[Software]
+* http://fnchooft.github.io/Projects[Projects]
