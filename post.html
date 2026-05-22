@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loading… — fnchooft.dev</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <style>
+    .hljs { background: transparent; color: var(--text); }
+
+    /* Snippet tab widget */
+    .snippet-widget { border: 1px solid var(--border); border-radius: var(--radius); margin: 1.5rem 0; overflow: hidden; }
+    .tab-bar { display: flex; background: var(--surface2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+    .tab-btn {
+      font-family: var(--mono); font-size: .72rem; padding: .5rem 1.1rem;
+      border: none; border-bottom: 2px solid transparent; background: none;
+      color: var(--text-dim); cursor: pointer; white-space: nowrap;
+      transition: color .15s, border-color .15s; letter-spacing: .03em;
+    }
+    .tab-btn:hover  { color: var(--text); }
+    .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+    .tab-panel        { display: none; }
+    .tab-panel.active { display: block; }
+    .tab-toolbar {
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: .5rem; padding: .35rem .75rem;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .btn-copy, .btn-github {
+      font-family: var(--mono); font-size: .65rem; padding: .2rem .65rem;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: none; color: var(--text-dim); cursor: pointer;
+      text-decoration: none; transition: all .15s; letter-spacing: .03em;
+    }
+    .btn-copy:hover   { border-color: var(--green); color: var(--green); }
+    .btn-github:hover { border-color: var(--blue);  color: var(--blue);  }
+    .btn-copy.copied  { color: var(--green); border-color: var(--green); }
+    .tab-panel pre { margin: 0 !important; border: none !important; border-radius: 0 !important; max-height: 420px; overflow-y: auto; overflow-x: auto; }
+    .tab-panel pre::before { display: none !important; }
+
+    /* Copy button on standalone pre blocks */
+    .post-body pre { position: relative; }
+    .btn-copy.standalone { position: absolute; top: .5rem; right: .5rem; opacity: 0; transition: opacity .15s; }
+    .post-body pre:hover .btn-copy.standalone { opacity: 1; }
+
+    /* States */
+    .post-loading { color: var(--text-dim); font-size: .82rem; padding: 3rem 0; }
+    .post-loading::before { content: '// '; color: var(--border); }
+    .post-error { color: var(--red); font-size: .82rem; padding: 2rem 0; }
+  </style>
+</head>
+<body>
+
+<site-header>
+  <div class="header-inner">
+    <a href="index.html" class="site-name">
+      <span class="prompt">~/dev</span>
+      <span style="color:var(--border)"> $ </span>
+      <span class="name">fnchooft.dev</span>
+      <span class="cursor"></span>
+    </a>
+    <nav>
+      <a href="index.html">home</a>
+      <a href="blog.html" class="active">writing</a>
+    </nav>
+  </div>
+</site-header>
+
+<main class="site-wrapper">
+  <article>
+    <header class="post-header" id="post-header">
+      <p class="post-loading">Loading post…</p>
+    </header>
+    <div class="post-body" id="post-body"></div>
+  </article>
+  <nav class="post-nav" id="post-nav" style="display:none">
+    <a href="blog.html" class="prev">all posts</a>
+    <span id="post-nav-next"></span>
+  </nav>
+</main>
+
+<site-footer>
+  <div class="footer-inner">
+    <span class="left">fnchooft.dev — plain HTML, no build step</span>
+    <span class="footer-right">hosted on <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a></span>
+  </div>
+</site-footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+// Change this to your actual GitHub repo URL before deploying.
+const GITHUB_REPO = 'https://github.com/fnchooft/fnchooft.github.io/master/';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function formatDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function buildHeader(meta) {
+  return `
+    <h1 class="post-title">${meta.title}</h1>
+    <div class="post-byline">
+      <span>${formatDate(meta.date)}</span>
+      <span class="dot">·</span>
+      <span>${meta.readingTime} min read</span>
+      <span class="dot">·</span>
+      <span class="tag-inline">${meta.tag}</span>
+      <span class="dot">·</span>
+      <span>Fabian N.C. van 't Hooft</span>
+    </div>`;
+}
+
+function buildNav(posts, currentPath) {
+  const idx = posts.findIndex(p => p.path === currentPath);
+  document.getElementById('post-nav').style.display = '';
+  if (idx > 0) {
+    const newer = posts[idx - 1];
+    document.getElementById('post-nav-next').innerHTML =
+      `<a href="post.html?p=${newer.path}" class="next">${newer.title}</a>`;
+  }
+}
+
+// ── Copy button ───────────────────────────────────────────────────────────────
+function makeCopyBtn(getText, extraClass) {
+  const btn = document.createElement('button');
+  btn.className = 'btn-copy' + (extraClass ? ' ' + extraClass : '');
+  btn.textContent = 'copy';
+  btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(getText()).then(() => {
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1600);
+    });
+  });
+  return btn;
+}
+
+function addStandaloneCopyButtons() {
+  document.querySelectorAll('.post-body pre').forEach(pre => {
+    if (pre.closest('.snippet-widget')) return;
+    pre.appendChild(makeCopyBtn(
+      () => pre.querySelector('code')?.textContent ?? pre.textContent,
+      'standalone'
+    ));
+  });
+}
+
+// ── Snippet tab widget ────────────────────────────────────────────────────────
+function buildTabWidget(tabs, contents, postPath) {
+  const wrap = document.createElement('div');
+  wrap.className = 'snippet-widget';
+  const bar = document.createElement('div');
+  bar.className = 'tab-bar';
+  const panels = [];
+
+  tabs.forEach(({ label, lang, file }, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = label;
+    btn.addEventListener('click', () => {
+      bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      panels.forEach(p => p.classList.remove('active'));
+      panels[i].classList.add('active');
+    });
+    bar.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel' + (i === 0 ? ' active' : '');
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'tab-toolbar';
+    toolbar.appendChild(makeCopyBtn(() => contents[i]));
+
+    const ghLink = document.createElement('a');
+    ghLink.className = 'btn-github';
+    ghLink.textContent = '↗ github';
+    ghLink.href = GITHUB_REPO + postPath + '/' + file;
+    ghLink.target = '_blank';
+    ghLink.rel = 'noopener';
+    toolbar.appendChild(ghLink);
+    panel.appendChild(toolbar);
+
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    // YANG has no hljs grammar — use xml as the closest approximation
+    const effectiveLang = file.endsWith('.yang') ? 'xml'
+                        : (lang && hljs.getLanguage(lang) ? lang : null);
+    if (effectiveLang) {
+      code.innerHTML = hljs.highlight(contents[i], { language: effectiveLang }).value;
+    } else {
+      code.textContent = contents[i];
+    }
+    pre.appendChild(code);
+    panel.appendChild(pre);
+    panels.push(panel);
+  });
+
+  wrap.appendChild(bar);
+  panels.forEach(p => wrap.appendChild(p));
+  return wrap;
+}
+
+async function processSnippetTabs(postPath) {
+  for (const div of Array.from(document.querySelectorAll('.snippet-tabs'))) {
+    const tabs = (div.dataset.tabs || '').split(',').map(t => {
+      const [label, lang, file] = t.trim().split('|');
+      return { label: label?.trim(), lang: lang?.trim(), file: file?.trim() };
+    }).filter(t => t.label && t.file);
+
+    const contents = await Promise.all(
+      tabs.map(({ file }) =>
+        fetch('./' + postPath + '/' + file)
+          .then(r => { if (!r.ok) throw new Error(); return r.text(); })
+          .catch(() => '// Could not load ' + file)
+      )
+    );
+    div.replaceWith(buildTabWidget(tabs, contents, postPath));
+  }
+}
+
+// ── marked config ─────────────────────────────────────────────────────────────
+marked.setOptions({
+  highlight(code, lang) {
+    if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+    return hljs.highlightAuto(code).value;
+  },
+  gfm: true,
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(async () => {
+  const header   = document.getElementById('post-header');
+  const body     = document.getElementById('post-body');
+  const postPath = new URLSearchParams(location.search).get('p');
+
+  if (!postPath) {
+    header.innerHTML = '<p class="post-error">// No post specified — try post.html?p=2026/05/18</p>';
+    return;
+  }
+
+  try {
+    const [posts, mdText] = await Promise.all([
+      fetch('./posts.json').then(r => r.json()),
+      fetch('./' + postPath + '.md').then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }),
+    ]);
+
+    const meta = posts.find(p => p.path === postPath);
+    if (meta) {
+      document.title = meta.title + ' — fnchooft.dev';
+      header.innerHTML = buildHeader(meta);
+      buildNav(posts, postPath);
+    } else {
+      header.innerHTML = '<h1 class="post-title">' + postPath + '</h1>';
+      document.getElementById('post-nav').style.display = '';
+    }
+
+    body.innerHTML = marked.parse(mdText);
+    await processSnippetTabs(postPath);
+    addStandaloneCopyButtons();
+
+  } catch (err) {
+    header.innerHTML = '';
+    body.innerHTML = '<p class="post-error">// Error: ' + err.message + '</p>';
+  }
+})();
+</script>
+</body>
+</html>

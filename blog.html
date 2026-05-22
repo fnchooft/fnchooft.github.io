@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Writing — fnchooft.dev</title>
+  <meta name="description" content="All posts on SDN, NETCONF/YANG, Erlang, Elixir, C++ and embedded systems." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<site-header>
+  <div class="header-inner">
+    <a href="index.html" class="site-name">
+      <span class="prompt">~/dev</span>
+      <span style="color:var(--border)"> $ </span>
+      <span class="name">fnchooft.dev</span>
+      <span class="cursor"></span>
+    </a>
+    <nav>
+      <a href="index.html">home</a>
+      <a href="blog.html" class="active">writing</a>
+    </nav>
+  </div>
+</site-header>
+
+<main class="site-wrapper">
+
+  <h1 class="page-title">writing</h1>
+  <p class="page-subtitle">// notes, deep-dives, and hard-won lessons from the systems layer.</p>
+
+  <div class="filter-bar" id="filters">
+    <button class="filter-btn active" data-tag="all">all</button>
+    <!-- injected by JS -->
+  </div>
+
+  <ul class="post-list" id="post-list"></ul>
+
+</main>
+
+<site-footer>
+  <div class="footer-inner">
+    <span class="left">fnchooft.dev — plain HTML, no build step</span>
+    <span class="footer-right">
+      hosted on <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a>
+    </span>
+  </div>
+</site-footer>
+
+<script type="module">
+  import { loadPosts, makeCard, animateCards } from './blog.js';
+  const list    = document.getElementById('post-list');
+  const filters = document.getElementById('filters');
+
+  loadPosts().then(posts => {
+    posts.forEach(post => list.appendChild(makeCard(post, '', 'normal')));
+    animateCards(list.querySelectorAll('.post-card'));
+
+    const tags = [...new Set(posts.map(p => p.tag))];
+    tags.forEach(tag => {
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.dataset.tag = tag;
+      btn.textContent = tag.toLowerCase();
+      filters.appendChild(btn);
+    });
+
+    filters.addEventListener('click', e => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      filters.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tag = btn.dataset.tag;
+      list.querySelectorAll('.post-card').forEach(card => {
+        card.style.display = (tag === 'all' || card.dataset.tag === tag) ? '' : 'none';
+      });
+    });
+  }).catch(() => {
+    list.innerHTML = '<li style="padding:1rem;color:var(--red)">// Error: could not load posts.json</li>';
+  });
+</script>
+
+</body>
+</html>

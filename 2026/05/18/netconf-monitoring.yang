@@ -1,0 +1,55 @@
+// Simplified excerpt of ietf-netconf-monitoring (RFC 6022)
+// showing the session and lock-relevant leaves.
+
+module ietf-netconf-monitoring {
+  namespace
+    "urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring";
+  prefix ncm;
+
+  typedef datastore-type {
+    type enumeration {
+      enum running   { description "The running datastore."; }
+      enum candidate { description "The candidate datastore."; }
+      enum startup   { description "The startup datastore."; }
+    }
+  }
+
+  grouping session-parameters {
+    leaf session-id {
+      type uint32 { range "1..max"; }
+      mandatory true;
+      description "Unique session identifier assigned by the server.";
+    }
+    leaf username {
+      type string;
+      mandatory true;
+    }
+    leaf source-host {
+      type string; // inet:host in the real module
+    }
+    leaf login-time {
+      type string; // yang:date-and-time
+      mandatory true;
+    }
+    leaf-list locked-datastores {
+      type datastore-type;
+      description
+        "Datastores currently locked by this session.
+         Empty when the session holds no locks.";
+    }
+  }
+
+  container netconf-state {
+    config false;
+    description "Top-level container for NETCONF monitoring state.";
+
+    container sessions {
+      description "Active NETCONF sessions on this device.";
+      list session {
+        key session-id;
+        description "Each entry represents one active session.";
+        uses session-parameters;
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "title": "NETCONF lock semantics: what the RFC doesn't warn you about",
+    "date": "2026-05-18",
+    "tag": "NETCONF",
+    "excerpt": "RFC 6241 describes the lock operation in two paragraphs. Production experience adds about twenty caveats. Here are the ones that cost me a weekend.",
+    "path": "2026/05/18",
+    "readingTime": 9
+  },
+  {
+    "title": "Modelling optional YANG leaves without drowning in presence containers",
+    "date": "2026-05-09",
+    "tag": "NETCONF",
+    "excerpt": "A practical guide to when presence containers are the right tool, when they are absolutely not, and how to keep your data model readable either way.",
+    "path": "2026/05/09",
+    "readingTime": 7
+  },
+  {
+    "title": "OTP supervision trees: the design decisions that actually matter",
+    "date": "2026-04-30",
+    "tag": "Erlang",
+    "excerpt": "one_for_one vs rest_for_one is a five-second choice. Deciding where a crash boundary should live takes considerably longer.",
+    "path": "2026/04/30",
+    "readingTime": 11
+  },
+  {
+    "title": "ZeroMQ patterns for telemetry pipelines in embedded devices",
+    "date": "2026-04-14",
+    "tag": "Embedded",
+    "excerpt": "PUB/SUB is the obvious choice until you need backpressure. Here is how I eventually reached PUSH/PULL with a dealer in the middle.",
+    "path": "2026/04/14",
+    "readingTime": 8
+  },
+  {
+    "title": "Using castxml and GSL to generate C++ serialisation boilerplate",
+    "date": "2026-03-28",
+    "tag": "C++",
+    "excerpt": "The CStructGen approach: parse your headers once, generate compare / toJson / fromJson helpers automatically, never write them by hand again.",
+    "path": "2026/03/28",
+    "readingTime": 10
+  },
+  {
+    "title": "Elixir digraphs as a runtime configuration model",
+    "date": "2026-03-11",
+    "tag": "Elixir",
+    "excerpt": "The :digraph module gives you a mutable directed graph in ETS. Here is how I use it to represent live network topology and query reachability in O(V+E).",
+    "path": "2026/03/11",
+    "readingTime": 6
+  }
+]
