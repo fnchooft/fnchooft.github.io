@@ -1,0 +1,38 @@
+name: Inject Code Snippets for GitBook
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  inject:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need full history to push gitbook branch
+
+      - name: Generate .md from .md.template
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          DOCS_DIR: getting-started
+        run: python3 .github/scripts/inject_snippets.py
+
+      - name: Push generated .md files to gitbook branch
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create/reset the gitbook branch to match main
+          git checkout -B gitbook
+
+          # Stage only the generated .md files (templates stay on main only)
+          git add -u .
+          git diff --cached --quiet && echo "Nothing to update." && exit 0
+
+          git commit -m "ci: generated docs from main@$(git rev-parse --short HEAD~1)"
+          git push --force-with-lease origin gitbook

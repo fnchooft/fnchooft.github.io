@@ -1,0 +1,19 @@
+{application, todo, [
+    {description, "Todo-list using inets httpd and sqlite3"},
+    {vsn, "0.1.0"},
+    {registered, [todo_db]},
+    {mod, {todo_app, []}},
+    {applications, [
+        kernel,
+        stdlib,
+        inets
+    ]},
+    {env, [
+        {port, 8080},
+        {bind_address, {127, 0, 0, 1}}
+    ]},
+    {modules, []},
+
+    {licenses, ["Apache-2.0"]},
+    {links, []}
+]}.

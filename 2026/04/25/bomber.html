@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple C64-style Flying Game</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+        #instructions { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            color: white; 
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="instructions">
+        Arrow Keys: Move | Space: Drop Bomb | Z: Shoot | Score: <span id="score">0</span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        
+        canvas.width = 800;
+        canvas.height = 400;
+        
+        // Game state
+        let score = 0;
+        let gameOver = false;
+        
+        // Player plane
+        const player = {
+            x: 100,
+            y: 200,
+            width: 40,
+            height: 20,
+            speed: 5,
+            color: '#00FF00',
+            bullets: [],
+            bombs: []
+        };
+        
+        // Enemy planes
+        let enemies = [];
+        let enemySpawnTimer = 0;
+        
+        // Buildings
+        let buildings = [];
+        for (let i = 0; i < 5; i++) {
+            buildings.push({
+                x: 200 + i * 150,
+                y: canvas.height - 50 - Math.random() * 30,
+                width: 40 + Math.random() * 30,
+                height: 50 + Math.random() * 30,
+                color: '#AA5500'
+            });
+        }
+        
+        // Controls
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            ' ': false,
+            'z': false
+        };
+        
+        // Event listeners
+        window.addEventListener('keydown', (e) => keys[e.key] = true);
+        window.addEventListener('keyup', (e) => keys[e.key] = false);
+        
+        // Game loop
+        function gameLoop() {
+            if (gameOver) return;
+            
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function update() {
+            // Move player
+            if (keys.ArrowUp) player.y -= player.speed;
+            if (keys.ArrowDown) player.y += player.speed;
+            if (keys.ArrowLeft) player.x -= player.speed;
+            if (keys.ArrowRight) player.x += player.speed;
+            
+            // Keep player on screen
+            player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+            player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
+            
+            // Shoot bullets
+            if (keys['z'] && Math.random() < 0.1) {
+                player.bullets.push({
+                    x: player.x + player.width,
+                    y: player.y + player.height / 2,
+                    width: 10,
+                    height: 2,
+                    speed: 10,
+                    color: '#FFFF00'
+                });
+            }
+            
+            // Drop bombs
+            if (keys[' '] && Math.random() < 0.05) {
+                player.bombs.push({
+                    x: player.x + player.width / 2,
+                    y: player.y + player.height,
+                    width: 5,
+                    height: 10,
+                    speed: 5,
+                    color: '#FF0000'
+                });
+            }
+            
+            // Update bullets
+            player.bullets.forEach((bullet, index) => {
+                bullet.x += bullet.speed;
+                
+                // Check for bullet-enemy collisions
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (checkCollision(bullet, enemy)) {
+                        player.bullets.splice(index, 1);
+                        enemies.splice(enemyIndex, 1);
+                        score += 10;
+                        scoreElement.textContent = score;
+                    }
+                });
+            });
+            
+            // Remove bullets off screen
+            player.bullets = player.bullets.filter(b => b.x < canvas.width);
+            
+            // Update bombs
+            player.bombs.forEach((bomb, index) => {
+                bomb.y += bomb.speed;
+                
+                // Check for bomb-building collisions
+                buildings.forEach((building, buildingIndex) => {
+                    if (checkCollision(bomb, building)) {
+                        player.bombs.splice(index, 1);
+                        buildings.splice(buildingIndex, 1);
+                        score += 5;
+                        scoreElement.textContent = score;
+                    }
+                });
+            });
+            
+            // Remove bombs off screen
+            player.bombs = player.bombs.filter(b => b.y < canvas.height);
+            
+            // Spawn enemies
+            enemySpawnTimer++;
+            if (enemySpawnTimer > 60) {
+                enemies.push({
+                    x: canvas.width,
+                    y: Math.random() * (canvas.height - 30),
+                    width: 30,
+                    height: 15,
+                    speed: 3 + Math.random() * 2,
+                    color: '#FF00FF'
+                });
+                enemySpawnTimer = 0;
+            }
+            
+            // Update enemies
+            enemies.forEach((enemy, index) => {
+                enemy.x -= enemy.speed;
+                
+                // Check for enemy-player collisions
+                if (checkCollision(player, enemy)) {
+                    gameOver = true;
+                    alert(`Game Over! Final Score: ${score}`);
+                }
+                
+                // Remove enemies off screen
+                if (enemy.x < -enemy.width) {
+                    enemies.splice(index, 1);
+                }
+            });
+        }
+        
+        function render() {
+            // Clear screen
+            ctx.fillStyle = '#0000AA';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ground
+            ctx.fillStyle = '#00AA00';
+            ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
+            
+            // Draw buildings
+            buildings.forEach(building => {
+                ctx.fillStyle = building.color;
+                ctx.fillRect(building.x, building.y, building.width, building.height);
+            });
+            
+            // Draw player
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // Draw bullets
+            ctx.fillStyle = '#FFFF00';
+            player.bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+            
+            // Draw bombs
+            ctx.fillStyle = '#FF0000';
+            player.bombs.forEach(bomb => {
+                ctx.fillRect(bomb.x, bomb.y, bomb.width, bomb.height);
+            });
+            
+            // Draw enemies
+            ctx.fillStyle = '#FF00FF';
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+        }
+        
+        function checkCollision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
+        }
+        
+        // Start game
+        gameLoop();
+    </script>
+</body>
+</html>

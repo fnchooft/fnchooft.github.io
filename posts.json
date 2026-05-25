@@ -8,43 +8,123 @@
     "readingTime": 9
   },
   {
-    "title": "Modelling optional YANG leaves without drowning in presence containers",
-    "date": "2026-05-09",
-    "tag": "NETCONF",
-    "excerpt": "A practical guide to when presence containers are the right tool, when they are absolutely not, and how to keep your data model readable either way.",
-    "path": "2026/05/09",
-    "readingTime": 7
-  },
-  {
-    "title": "OTP supervision trees: the design decisions that actually matter",
-    "date": "2026-04-30",
-    "tag": "Erlang",
-    "excerpt": "one_for_one vs rest_for_one is a five-second choice. Deciding where a crash boundary should live takes considerably longer.",
-    "path": "2026/04/30",
-    "readingTime": 11
-  },
-  {
-    "title": "ZeroMQ patterns for telemetry pipelines in embedded devices",
-    "date": "2026-04-14",
-    "tag": "Embedded",
-    "excerpt": "PUB/SUB is the obvious choice until you need backpressure. Here is how I eventually reached PUSH/PULL with a dealer in the middle.",
-    "path": "2026/04/14",
-    "readingTime": 8
-  },
-  {
-    "title": "Using castxml and GSL to generate C++ serialisation boilerplate",
-    "date": "2026-03-28",
-    "tag": "C++",
-    "excerpt": "The CStructGen approach: parse your headers once, generate compare / toJson / fromJson helpers automatically, never write them by hand again.",
-    "path": "2026/03/28",
+    "title": "AI's big bet: who really wins from the data centre boom?",
+    "date": "2026-06-21",
+    "tag": "AI",
+    "excerpt": "Data centres are reshaping power grids, communities and labour markets. Record revenues coexist with layoffs. Environmental justice advocates, nuclear proponents and policy researchers all have something to say about who benefits.",
+    "path": "2026/06/21",
     "readingTime": 10
   },
   {
-    "title": "Elixir digraphs as a runtime configuration model",
-    "date": "2026-03-11",
-    "tag": "Elixir",
-    "excerpt": "The :digraph module gives you a mutable directed graph in ETS. Here is how I use it to represent live network topology and query reachability in O(V+E).",
-    "path": "2026/03/11",
+    "title": "AI-generated HTML games: Tetris and Bomberman in a single file",
+    "date": "2026-04-25",
+    "tag": "AI",
+    "excerpt": "Asking an AI to produce self-contained HTML games \u2014 no frameworks, no build step. The results for Tetris and a Bomberman clone are playable and illustrate what current models can produce in a single shot.",
+    "path": "2026/04/25",
+    "readingTime": 4
+  },
+  {
+    "title": "GitBook CI: injecting code snippets automatically with GitHub Actions",
+    "date": "2026-04-23",
+    "tag": "CI/CD",
+    "excerpt": "A Python script and GitHub Actions workflow that scan all markdown files and inline referenced source files before publication \u2014 keeping docs and code in sync without manual copy-paste.",
+    "path": "2026/04/23",
+    "readingTime": 5
+  },
+  {
+    "title": "OTP 29 new features: comprehensions, shuffle, ANSI and native records",
+    "date": "2026-04-22",
+    "tag": "Erlang",
+    "excerpt": "A demo module covering the headline OTP 29 additions \u2014 multi-valued comprehensions (EEP-78), rand:shuffle/1, io_ansi terminal sequences, and the experimental native records feature (EEP-79). Plus kerl workflow for version management.",
+    "path": "2026/04/22",
+    "readingTime": 7
+  },
+  {
+    "title": "An Erlang OTP release portal: supervision, parsing and view layers",
+    "date": "2025-11-03",
+    "tag": "Erlang",
+    "excerpt": "A walkthrough of the release_portal rebar3 application \u2014 how the supervisor tree is structured, how the parser and logic modules separate concerns, and what the view layer is responsible for.",
+    "path": "2025/11/03",
     "readingTime": 6
+  },
+  {
+    "title": "Code analysis with LangChain and TreeSitter: splitting Erlang and Elixir",
+    "date": "2025-10-14",
+    "tag": "Python",
+    "excerpt": "TreeSitter gives you a real AST; LangChain wraps it for RAG pipelines. This PoC shows how to split Erlang and Elixir source into semantically meaningful chunks and feed them to a language model.",
+    "path": "2025/10/14",
+    "readingTime": 6
+  },
+  {
+    "title": "Network interfaces in C: stb_ds dynamic arrays and stb_sprintf",
+    "date": "2025-09-22",
+    "tag": "C",
+    "excerpt": "Using the STB single-file C headers to build a network-interface model with dynamic arrays of sub-interfaces and VLANs. Includes a tree-style printer and string-formatting examples.",
+    "path": "2025/09/22",
+    "readingTime": 5
+  },
+  {
+    "title": "DHCP configuration modelling in C with STB single-file headers",
+    "date": "2025-09-15",
+    "tag": "C",
+    "excerpt": "Mapping a YANG DHCP model to a C data structure using stb_ds \u2014 dynamic arrays with fixed string lengths for embedded-system constraints. Two implementations: fixed strings and char pointers.",
+    "path": "2025/09/15",
+    "readingTime": 5
+  },
+  {
+    "title": "GPT-5 generated: an Erlang Todo App with SQLite and inets",
+    "date": "2025-08-28",
+    "tag": "Erlang",
+    "excerpt": "A complete rebar3 OTP application generated by GPT-5: SQLite storage via esqlite, HTTP API with mod_esi, JSON with the built-in OTP 27+ json module, and a small HTML UI \u2014 all from a single prompt.",
+    "path": "2025/08/28",
+    "readingTime": 8
+  },
+  {
+    "title": "Simulating intermittent networks: Docker, HAProxy and tc",
+    "date": "2025-08-25",
+    "tag": "Docker",
+    "excerpt": "A Docker Compose setup with a Postgres primary/replica cluster, HAProxy load balancer and three clients. Uses iproute2 tc to inject 20% packet loss between specific services \u2014 three scenarios, all scriptable.",
+    "path": "2025/08/25",
+    "readingTime": 8
+  },
+  {
+    "title": "PostgreSQL ltree: exporting hierarchical data to XML",
+    "date": "2025-08-22",
+    "tag": "PostgreSQL",
+    "excerpt": "A generic plpgsql function that walks an ltree-structured table and produces nested XML, parameterised by start node and depth. Fully containerised with Docker and testable with make test.",
+    "path": "2025/08/22",
+    "readingTime": 7
+  },
+  {
+    "title": "XML entity resolution with xmllint: co-located and external variables",
+    "date": "2025-06-15",
+    "tag": "XML",
+    "excerpt": "Two patterns for managing XML variables without a full template engine \u2014 co-located entity definitions at the top of the file, and external entity files resolved with xmllint at build time.",
+    "path": "2025/06/15",
+    "readingTime": 4
+  },
+  {
+    "title": "GSL: teaching Gemini to generate C structs from XML",
+    "date": "2025-05-31",
+    "tag": "AI",
+    "excerpt": "The Generator Scripting Language by iMatix turns XML entity definitions into any target language. Here I teach Gemini about GSL and let it produce a working C struct generator \u2014 Makefile and all.",
+    "path": "2025/05/31",
+    "readingTime": 6
+  },
+  {
+    "title": "AI-assisted diagram creation: from image to Mermaid",
+    "date": "2025-05-29",
+    "tag": "AI",
+    "excerpt": "Giving Gemini an architecture diagram and asking it to produce Mermaid syntax. The result is version-controllable, diff-friendly and good enough for technical documentation.",
+    "path": "2025/05/29",
+    "readingTime": 4
+  },
+  {
+    "title": "Erlang Fibonacci: the tail-recursive iterator pattern",
+    "date": "2025-05-28",
+    "tag": "Erlang",
+    "excerpt": "A clean Erlang idiom for the Fibonacci sequence \u2014 tail-recursive, using an accumulator pair, and a good template for integer iteration in functional code.",
+    "path": "2025/05/28",
+    "readingTime": 3
   }
 ]

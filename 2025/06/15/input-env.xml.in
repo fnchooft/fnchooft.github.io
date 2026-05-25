@@ -1,0 +1,7 @@
+<!DOCTYPE config SYSTEM "vars.env">
+<config>
+    <server>
+        <address>http://&HOST;:&PORT;</address>
+        <protocol>&PROTOCOL;</protocol>
+    </server>
+</config>

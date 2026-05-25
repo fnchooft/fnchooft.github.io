@@ -1,0 +1,180 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
+
+// --------------------------
+// Type Definitions
+// --------------------------
+
+typedef enum {
+    LOG_KERN,
+    LOG_MAIL,
+    LOG_LOCAL7
+} LogFacility;
+
+typedef struct {
+    char* low_addr;
+    char* high_addr;
+    bool dynamic_bootp;
+} DhcpRange;
+
+typedef struct {
+    char* net;
+    char* mask;
+    DhcpRange* range;  // Optional (NULL if not present)
+    char* routers;
+    char* max_lease_time;  // Duration string like "PT7200S"
+} DhcpSubnet;
+
+typedef struct {
+    char* name;
+    DhcpSubnet* subnets;
+} DhcpSharedNetwork;
+
+typedef struct {
+    char* default_lease_time;  // Duration string
+    char* max_lease_time;      // Duration string
+    LogFacility log_facility;
+    
+    struct {
+        DhcpSubnet* subnets;
+    } subnets;
+    
+    struct {
+        DhcpSharedNetwork* networks;
+    } shared_networks;
+} DhcpConfig;
+
+// --------------------------
+// Helper Functions
+// --------------------------
+
+DhcpSubnet* create_subnet(const char* net, const char* mask) {
+    DhcpSubnet* subnet = calloc(1, sizeof(DhcpSubnet));
+    subnet->net = strdup(net);
+    subnet->mask = strdup(mask);
+    subnet->max_lease_time = strdup("PT7200S");  // Default value
+    return subnet;
+}
+
+void add_range_to_subnet(DhcpSubnet* subnet, const char* low, const char* high, bool dynamic_bootp) {
+    subnet->range = calloc(1, sizeof(DhcpRange));
+    subnet->range->low_addr = strdup(low);
+    subnet->range->high_addr = high ? strdup(high) : NULL;
+    subnet->range->dynamic_bootp = dynamic_bootp;
+}
+
+void free_dhcp_config(DhcpConfig* config) {
+    if (!config) return;
+    
+    free(config->default_lease_time);
+    free(config->max_lease_time);
+    
+    // Free subnets
+    for (int i = 0; i < arrlen(config->subnets.subnets); i++) {
+        DhcpSubnet* s = &config->subnets.subnets[i];
+        free(s->net);
+        free(s->mask);
+        free(s->routers);
+        free(s->max_lease_time);
+        if (s->range) {
+            free(s->range->low_addr);
+            free(s->range->high_addr);
+            free(s->range);
+        }
+    }
+    arrfree(config->subnets.subnets);
+    
+    // Free shared networks
+    for (int i = 0; i < arrlen(config->shared_networks.networks); i++) {
+        DhcpSharedNetwork* n = &config->shared_networks.networks[i];
+        free(n->name);
+        
+        for (int j = 0; j < arrlen(n->subnets); j++) {
+            DhcpSubnet* s = &n->subnets[j];
+            free(s->net);
+            free(s->mask);
+            free(s->routers);
+            free(s->max_lease_time);
+            if (s->range) {
+                free(s->range->low_addr);
+                free(s->range->high_addr);
+                free(s->range);
+            }
+        }
+        arrfree(n->subnets);
+    }
+    arrfree(config->shared_networks.networks);
+}
+
+// --------------------------
+// Main Program
+// --------------------------
+
+void print_config(const DhcpConfig* config) {
+    printf("DHCP Configuration:\n");
+    printf("  Default Lease Time: %s\n", config->default_lease_time);
+    printf("  Max Lease Time: %s\n", config->max_lease_time);
+    printf("  Log Facility: %d\n", config->log_facility);
+    
+    printf("\nSubnets:\n");
+    for (int i = 0; i < arrlen(config->subnets.subnets); i++) {
+        const DhcpSubnet* s = &config->subnets.subnets[i];
+        printf("  - %s/%s\n", s->net, s->mask);
+        if (s->range) {
+            printf("    Range: %s-%s (BOOTP: %s)\n", 
+                   s->range->low_addr,
+                   s->range->high_addr ? s->range->high_addr : "N/A",
+                   s->range->dynamic_bootp ? "enabled" : "disabled");
+        }
+    }
+    
+    printf("\nShared Networks:\n");
+    for (int i = 0; i < arrlen(config->shared_networks.networks); i++) {
+        const DhcpSharedNetwork* n = &config->shared_networks.networks[i];
+        printf("  Network: %s\n", n->name);
+        for (int j = 0; j < arrlen(n->subnets); j++) {
+            const DhcpSubnet* s = &n->subnets[j];
+            printf("    - %s/%s\n", s->net, s->mask);
+        }
+    }
+}
+
+int main() {
+    DhcpConfig config = {
+        .default_lease_time = strdup("PT600S"),
+        .max_lease_time = strdup("PT7200S"),
+        .log_facility = LOG_LOCAL7
+    };
+    
+    // Add regular subnets
+    DhcpSubnet* subnet1 = create_subnet("192.168.1.0", "255.255.255.0");
+    subnet1->routers = strdup("192.168.1.1");
+    add_range_to_subnet(subnet1, "192.168.1.100", "192.168.1.200", false);
+    arrput(config.subnets.subnets, *subnet1);
+    free(subnet1);  // Content was copied
+    
+    // Add shared network
+    DhcpSharedNetwork shared = {
+        .name = strdup("Office-Network"),
+        .subnets = NULL
+    };
+    
+    DhcpSubnet* shared_subnet1 = create_subnet("10.0.1.0", "255.255.255.0");
+    add_range_to_subnet(shared_subnet1, "10.0.1.50", "10.0.1.150", true);
+    arrput(shared.subnets, *shared_subnet1);
+    free(shared_subnet1);
+    
+    arrput(config.shared_networks.networks, shared);
+    
+    // Print configuration
+    print_config(&config);
+    
+    // Cleanup
+    free_dhcp_config(&config);
+    return 0;
+}

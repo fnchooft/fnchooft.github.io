@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Erlang Todo (inets + SQLite)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    h1 { margin-top: 0; }
+    form, table { margin-top: 1rem; }
+    input[type="text"] { width: 20rem; padding: 0.4rem; }
+    button { padding: 0.4rem 0.8rem; margin-left: 0.3rem; }
+    table { border-collapse: collapse; width: 100%; max-width: 48rem; }
+    th, td { border: 1px solid #888; padding: 0.4rem 0.6rem; text-align: left; }
+    th { background: #eee; }
+    .muted { color: #666; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Erlang Todo</h1>
+  <p class="muted">Backend: inets httpd + mod_esi, storage via SQLite (esqlite). Endpoints: /todo/list, /todo/add?text=..., /todo/del?id=...</p>
+
+  <section>
+    <h2>Add Todo</h2>
+    <form id="add-form">
+      <label for="new-text">Text:</label>
+      <input id="new-text" name="text" type="text" placeholder="Buy milk" required />
+      <button type="submit">Add</button>
+    </form>
+    <div id="add-status" class="muted"></div>
+  </section>
+
+  <section>
+    <h2>Todos</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 5rem;">ID</th>
+          <th>Text</th>
+          <th style="width: 14rem;">Created</th>
+          <th style="width: 8rem;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="todos-body">
+        <tr><td colspan="4" class="muted">Loading...</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <script>
+    async function fetchJSON(url) {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    function tsToString(ts) {
+      if (typeof ts !== "number") return "";
+      try { return new Date(ts * 1000).toLocaleString(); } catch { return String(ts); }
+    }
+
+    async function loadTodos() {
+      const tbody = document.getElementById("todos-body");
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">Loading...</td></tr>`;
+      try {
+        const data = await fetchJSON("todo/todo_http:list");
+        const todos = Array.isArray(data.todos) ? data.todos : [];
+        if (todos.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="muted">No todos yet.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = "";
+        for (const t of todos) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${t.id}</td>
+            <td>${escapeHtml(t.text)}</td>
+            <td>${tsToString(t.created_at)}</td>
+            <td><button data-id="${t.id}" class="del-btn">Delete</button></td>
+          `;
+          tbody.appendChild(tr);
+        }
+        for (const btn of document.querySelectorAll(".del-btn")) {
+          btn.addEventListener("click", async (e) => {
+            const id = e.currentTarget.getAttribute("data-id");
+            await deleteTodo(id);
+          });
+        }
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" class="muted">Failed to load: ${escapeHtml(String(e))}</td></tr>`;
+      }
+    }
+
+    async function addTodo(text) {
+      const status = document.getElementById("add-status");
+      status.textContent = "Adding...";
+      try {
+        const data = await fetchJSON(`todo/todo_http:add?text=${encodeURIComponent(text)}`);
+        if (data.ok) {
+          status.textContent = `Added with id ${data.id}.`;
+          await loadTodos();
+        } else {
+          status.textContent = `Add failed: ${data.error || "unknown"}.`;
+        }
+      } catch (e) {
+        status.textContent = `Add failed: ${String(e)}.`;
+      }
+    }
+
+    async function deleteTodo(id) {
+      try {
+        const data = await fetchJSON(`todo/todo_http:del?id=${id}`);
+        if (data.ok) {
+          await loadTodos();
+        } else {
+          alert(`Delete failed: ${data.error || "unknown"}`);
+        }
+      } catch (e) {
+        alert(`Delete failed: ${String(e)}`);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    document.getElementById("add-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("new-text");
+      const text = input.value.trim();
+      if (!text) return;
+      await addTodo(text);
+      input.value = "";
+      input.focus();
+    });
+
+    loadTodos();
+  </script>
+</body>
+</html>

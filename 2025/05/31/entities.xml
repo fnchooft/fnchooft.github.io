@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+
+<schema script="entity_generator.gsl">
+
+  <entity name="Person">
+    <field name="id" type="int" desc="Unique identifier for the person"/>
+    <field name="firstName" type="char*" desc="First name of the person"/>
+    <field name="lastName" type="char*" desc="Last name of the person"/>
+    <field name="age" type="int" desc="Age of the person"/>
+  </entity>
+
+  <entity name="Product">
+    <field name="sku" type="char*" desc="Stock Keeping Unit"/>
+    <field name="name" type="char*" desc="Name of the product"/>
+    <field name="price" type="double" desc="Price of the product"/>
+    <field name="quantity" type="int" desc="Available quantity in stock"/>
+  </entity>
+
+
+  <!-- Add more entities here as needed -->
+  <!--
+  <entity name="interface">
+    <field name="id" type="int" desc="Unique identifier for the interface"/>
+    <field name="name" type="char*" desc="First name of the interface"/>
+    <field name="type" type="char*" desc="Last name of the interface"/>
+    <field name="enabled" type="int" desc="Age of the interface"/>
+  </entity>
+
+  <entity name="Order">
+    <field name="orderId" type="int" desc="Unique order identifier"/>
+    <field name="customerId" type="int" desc="ID of the customer placing the order"/>
+    <field name="orderDate" type="char*" desc="Date the order was placed (e.g., YYYY-MM-DD)"/>
+  </entity>
+  -->
+</schema>

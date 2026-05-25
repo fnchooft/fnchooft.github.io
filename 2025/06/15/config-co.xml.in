@@ -1,0 +1,12 @@
+<!DOCTYPE config [
+    <!ENTITY HOST "example.com">
+    <!ENTITY PORT "8080">
+    <!ENTITY PROTOCOL "HTTPS">
+]>
+<config>
+    <server>
+        <address>http://&HOST;:&PORT;</address>
+        <protocol>&PROTOCOL;</protocol>
+    </server>
+</config>
+

@@ -1,0 +1,16 @@
+{application, release_portal, [
+    {description, "A Software Release Portal"},
+    {vsn, "0.1.0"},
+    {registered, []},
+    {mod, {release_portal_app, []}},
+    {applications, [
+        kernel,
+        stdlib,
+        inets
+    ]},
+    {env, []},
+    {modules, []},
+
+    {licenses, ["Apache-2.0"]},
+    {links, []}
+]}.

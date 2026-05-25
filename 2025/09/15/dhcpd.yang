@@ -1,0 +1,116 @@
+module dhcpd {
+  namespace "http://modeling.com/example/dhcpd";
+  prefix dhcpd;
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  typedef loglevel {
+    type enumeration {
+      enum "kern";
+      enum "mail";
+      enum "local7";
+    }
+  }
+
+  container dhcp {
+    leaf default-lease-time {
+      type xs:duration;
+      default "PT600S";
+    }
+    leaf max-lease-time {
+      type xs:duration;
+      default "PT7200S";
+    }
+    leaf log-facility {
+      type loglevel;
+      default "local7";
+    }
+    container subnets {
+      list subnet {
+        key "net mask";
+        leaf net {
+          type inet:ipv4-address;
+        }
+        leaf mask {
+          type inet:ipv4-address;
+        }
+        container range {
+          presence "";
+          leaf dynamic-bootp {
+            description
+              "Enable BOOTP for this instance.";
+            type boolean;
+            default "false";
+          }
+          leaf low-addr {
+            description
+              "Enable BOOTP for this instance.";
+            mandatory true;
+            type inet:ipv4-address;
+          }
+          leaf high-addr {
+            description
+              "Enable BOOTP for this instance.";
+            type inet:ipv4-address;
+          }
+        }
+        leaf routers {
+          type string;
+        }
+        leaf max-lease-time {
+          type xs:duration;
+          default "PT7200S";
+        }
+      }
+    }
+    container shared-networks {
+      list shared-network {
+        max-elements 1024;
+        key name;
+        leaf name {
+          type string;
+        }
+        container subnets {
+          list subnet {
+            key "net mask";
+            leaf net {
+              type inet:ipv4-address;
+            }
+            leaf mask {
+              type inet:ipv4-address;
+            }
+            container range {
+              presence "";
+              leaf dynamic-bootp {
+                description
+                  "Enable BOOTP for this instance.";
+                type boolean;
+                default "false";
+              }
+              leaf low-addr {
+                description
+                  "Enable BOOTP for this instance.";
+                mandatory true;
+                type inet:ipv4-address;
+              }
+              leaf high-addr {
+                description
+                  "Enable BOOTP for this instance.";
+                type inet:ipv4-address;
+              }
+            }
+            leaf routers {
+              type string;
+            }
+            leaf max-lease-time {
+              type string;
+              default "PT7200S";
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,341 @@
+Project: Generic Tree to XML Exporter
+Instructions: Create the following files and directories in a new project folder.
+File: README.md
+Copy the content below and save it as README.md.
+code
+Markdown
+# Generic Tree (ltree) to XML Exporter in PostgreSQL
+
+This project demonstrates a powerful and generic method for storing hierarchical data in a single PostgreSQL table using the `ltree` extension and exporting it to a nested XML format.
+
+The core of the project is a `plpgsql` function, `generate_xml_from_tree`, which can export any subtree from a specified starting node to a given depth. The entire environment is containerized with Docker and managed with a Makefile for easy setup and testing.
+
+## Features
+
+*   **Generic Table Structure:** A single table (`generic_tree`) can store multiple, unrelated hierarchies.
+*   **Powerful Export Function:** A robust procedural function converts `ltree` paths into nested XML.
+*   **Parameterized:** Export any part of the tree by specifying a starting node ID and maximum depth.
+*   **Self-Contained:** The entire environment, including PostgreSQL and all schemas, is managed by Docker.
+*   **Testable:** A simple `make test` command verifies that the function is working correctly.
+
+## Prerequisites
+
+*   Docker
+*   `make`
+
+## How to Use
+
+1.  **Build the Docker Image:**
+    ```sh
+    make build
+    ```
+
+2.  **Start the PostgreSQL Container:**
+    ```sh
+    make start
+    ```
+
+3.  **Run the Tests:**
+    ```sh
+    make test
+    ```
+
+4.  **Connect to the Database (Optional):**
+    ```sh
+    make psql
+    ```
+
+5.  **Stop and Clean Up:**
+    ```sh
+    make stop
+    ```
+File: Dockerfile
+Copy the content below and save it as Dockerfile.
+code
+Dockerfile
+# Use the official PostgreSQL 16 image
+FROM postgres:16
+
+# The postgres image will automatically run scripts in this directory on first startup.
+# The scripts are run in alphabetical order.
+COPY sql/ /docker-entrypoint-initdb.d/
+File: Makefile
+Copy the content below and save it as Makefile.
+code
+Makefile
+# Makefile for managing the ltree-to-xml PostgreSQL environment
+
+# --- Configuration ---
+IMAGE_NAME := pg-ltree-xml
+CONTAINER_NAME := pg-ltree-xml-container
+DB_PASSWORD := mysecretpassword
+
+# --- Docker Commands ---
+
+.PHONY: build
+build:
+	@echo "Building PostgreSQL Docker image..."
+	@docker build -t $(IMAGE_NAME) .
+
+.PHONY: start
+start:
+	@echo "Starting PostgreSQL container..."
+	@docker run --name $(CONTAINER_NAME) \
+		-e POSTGRES_PASSWORD=$(DB_PASSWORD) \
+		-d -p 5432:5432 \
+		$(IMAGE_NAME)
+
+.PHONY: stop
+stop:
+	@echo "Stopping and removing PostgreSQL container..."
+	@docker stop $(CONTAINER_NAME) || true
+	@docker rm $(CONTAINER_NAME) || true
+
+.PHONY: test
+test:
+	@echo "Running tests..."
+	@docker exec -i $(CONTAINER_NAME) psql -U postgres < sql/test.sql
+
+.PHONY: psql
+psql:
+	@echo "Connecting to the database..."
+	@docker exec -it $(CONTAINER_NAME) psql -U postgres
+File: .gitignore
+Copy the content below and save it as .gitignore.
+code
+Code
+# Ignore local environment files
+.env
+
+# Ignore build artifacts
+*.log
+File: sql/00_init.sql
+Create a directory named sql and save the content below as 00_init.sql inside it.
+code
+SQL
+-- 00_init.sql
+-- Enable the ltree extension and create the generic_tree table.
+
+\echo 'Creating ltree extension...'
+CREATE EXTENSION IF NOT EXISTS ltree;
+
+\echo 'Creating generic_tree table...'
+CREATE TABLE generic_tree (
+    id SERIAL PRIMARY KEY,
+    path LTREE NOT NULL,
+    node_type VARCHAR(50) NOT NULL,
+    value TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    metadata JSONB
+);
+
+CREATE INDEX generic_tree_path_gist_idx ON generic_tree USING GIST (path);
+CREATE INDEX generic_tree_node_type_idx ON generic_tree (node_type);
+
+\echo 'Schema initialized.'
+File: sql/01_function.sql
+Save the content below as 01_function.sql inside the sql directory.
+code
+SQL
+-- 01_function.sql
+-- Defines the function to convert a subtree from the generic_tree table to XML.
+
+\echo 'Creating generate_xml_from_tree function...'
+
+CREATE OR REPLACE FUNCTION generate_xml_from_tree(
+    p_start_node_id INT,
+    p_max_depth INT
+)
+RETURNS XML
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    result_xml XML;
+    start_level INT;
+    max_level INT;
+BEGIN
+    CREATE TEMP TABLE _subtree_nodes (
+        id INT,
+        path LTREE,
+        node_type VARCHAR(50),
+        value TEXT,
+        type VARCHAR(50),
+        metadata JSONB
+    ) ON COMMIT DROP;
+
+    CREATE TEMP TABLE _xml_build_step (
+        path LTREE PRIMARY KEY,
+        node_xml XML
+    ) ON COMMIT DROP;
+
+    WITH query_scope AS (
+        SELECT path AS start_path
+        FROM generic_tree
+        WHERE id = p_start_node_id
+    )
+    INSERT INTO _subtree_nodes
+    SELECT
+        lc.id, lc.path, lc.node_type, lc.value, lc.type, lc.metadata
+    FROM
+        generic_tree lc, query_scope qs
+    WHERE
+        lc.path <@ qs.start_path
+        AND (nlevel(lc.path) - nlevel(qs.start_path)) < p_max_depth;
+
+    SELECT MIN(nlevel(path)), MAX(nlevel(path))
+    INTO start_level, max_level
+    FROM _subtree_nodes;
+
+    IF max_level IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    FOR current_level IN REVERSE max_level..start_level LOOP
+        INSERT INTO _xml_build_step (path, node_xml)
+        SELECT
+            n.path,
+            xmlparse(CONTENT
+                '<' || n.node_type || format(' id="%s"', n.id) || format(' type="%s"', n.type) || '>'
+                ||
+                COALESCE((xmlconcat(
+                    XMLFOREST(n.value),
+                    (CASE
+                        WHEN n.metadata IS NOT NULL THEN
+                           (SELECT XMLAGG(xmlparse(CONTENT
+                               '<' || key || '>'
+                               || replace(replace(replace(replace(replace(value, '&', '&amp;'), '<', '&lt;'), '>', '&gt;'), '"', '&quot;'), '''', '&apos;')
+                               || '</' || key || '>'
+                            ))
+                            FROM jsonb_each_text(n.metadata))
+                        ELSE NULL
+                    END),
+                    (
+                        SELECT XMLAGG(c.node_xml ORDER BY c.path)
+                        FROM _xml_build_step AS c
+                        WHERE c.path <@ n.path AND nlevel(c.path) = current_level + 1
+                    )
+                ))::text, '')
+                ||
+                '</' || n.node_type || '>'
+            )
+        FROM
+            _subtree_nodes AS n
+        WHERE
+            nlevel(n.path) = current_level;
+    END LOOP;
+
+    SELECT node_xml INTO result_xml
+    FROM _xml_build_step
+    JOIN _subtree_nodes ON _subtree_nodes.path = _xml_build_step.path
+    WHERE _subtree_nodes.id = p_start_node_id;
+
+    RETURN result_xml;
+END;
+$$;
+
+\echo 'Function created.'
+File: sql/02_data.sql
+Save the content below as 02_data.sql inside the sql directory.
+code
+SQL
+-- 02_data.sql
+-- Inserts test data into the generic_tree table.
+
+\echo 'Inserting test data...'
+
+INSERT INTO generic_tree (id, path, node_type, value, type, metadata) VALUES
+-- Overriding the serial ID so we have predictable IDs for testing
+(1, '1',         'filesystem', '/',                'directory', '{"permissions": "drwxr-xr-x"}'),
+(2, '1.1',       'filesystem', 'home',             'directory', '{"permissions": "drwxr-xr-x"}'),
+(3, '1.1.1',     'filesystem', 'alice',            'directory', '{"owner": "alice", "permissions": "drwx------"}'),
+(4, '1.1.1.1',   'filesystem', 'document.txt',     'file',      '{"size_kb": 12, "mime_type": "text/plain"}'),
+(5, '1.1.1.2',   'filesystem', 'photo.jpg',        'file',      '{"size_kb": 2048, "mime_type": "image/jpeg"}'),
+(6, '1.2',       'filesystem', 'etc',              'directory', '{"permissions": "drwxr-xr-x"}'),
+(7, '1.2.1',     'filesystem', 'postgres',         'directory', '{"owner": "postgres", "permissions": "drwx------"}'),
+(8, '1.2.1.1',   'filesystem', 'postgresql.conf',  'config_file', '{"size_kb": 28, "version": 16}'),
+
+(10, '2',         'organization', 'Alice Smith',    'ceo',       '{"employee_id": 1}'),
+(11, '2.1',       'organization', 'Bob Johnson',    'vp_engineering', '{"employee_id": 10}'),
+(12, '2.1.1',     'organization', 'Charlie Brown',  'director',  '{"employee_id": 101, "team": "Platform"}'),
+(13, '2.1.1.1',   'organization', 'Diana Prince',   'lead_dev',  '{"employee_id": 105, "specialty": "Databases"}'),
+(14, '2.1.2',     'organization', 'Eve Williams',   'director',  '{"employee_id": 102, "team": "Frontend"}'),
+(15, '2.2',       'organization', 'Frank Miller',   'vp_sales',  '{"employee_id": 12}'),
+(16, '2.2.1',     'organization', 'Grace Lee',      'sales_manager', '{"employee_id": 201, "region": "North America"}'),
+
+(20, '3',         'app_config', 'WebApp Settings', 'root',        NULL),
+(21, '3.1',       'app_config', 'database',        'section',     NULL),
+(22, '3.1.1',     'app_config', '5432',            'integer',     '{"name": "port", "required": true}'),
+(23, '3.1.2',     'app_config', 'true',            'boolean',     '{"name": "enable_ssl", "required": false}'),
+(24, '3.1.3',     'app_config', 'app_user',        'string',      '{"name": "username", "sensitive": true}'),
+(25, '3.2',       'app_config', 'api_keys',        'section',     NULL),
+(26, '3.2.1',     'app_config', 'abcdef123456',    'string',      '{"name": "google_maps", "sensitive": true}'),
+(27, '3.3',       'app_config', 'feature_flags',   'json',        '{"checkout_v2": true, "new_dashboard": false}', '{"name": "flags"}');
+
+-- Manually update the sequence to avoid collisions with future inserts
+SELECT setval('generic_tree_id_seq', (SELECT MAX(id) FROM generic_tree));
+
+\echo 'Test data inserted.'
+File: sql/test.sql
+Save the content below as test.sql inside the sql directory.
+code
+SQL
+-- test.sql
+-- Runs a series of tests against the generate_xml_from_tree function.
+
+-- Exit immediately if a command fails
+\set ON_ERROR_STOP on
+
+\echo '--- Running Test Suite ---'
+
+DO $$
+DECLARE
+    test_result BOOLEAN;
+    test_xml XML;
+BEGIN
+    -- Test 1: Full depth of a complex tree
+    \echo 'Test 1: Full filesystem tree (ID 1, depth 4)'
+    test_xml := generate_xml_from_tree(1, 4);
+    -- Check if the deepest node exists in the output
+    test_result := xpath_exists('//filesystem[@id="8"]', test_xml);
+    ASSERT test_result, 'FAIL: Deepest filesystem node not found.';
+    \echo '[PASS] Test 1 completed.' ;
+
+    -- Test 2: Limited depth
+    \echo 'Test 2: Filesystem tree with limited depth (ID 1, depth 2)'
+    test_xml := generate_xml_from_tree(1, 2);
+    -- Check that a mid-level node exists
+    test_result := xpath_exists('//filesystem[@id="2"]', test_xml);
+    ASSERT test_result, 'FAIL: Mid-level node "home" not found.';
+    -- Check that a deeper node does NOT exist
+    test_result := NOT xpath_exists('//filesystem[@id="3"]', test_xml);
+    ASSERT test_result, 'FAIL: Deeper node "alice" was found, but should be excluded by depth.';
+    \echo '[PASS] Test 2 completed.' ;
+
+    -- Test 3: Starting from a subtree (organization chart)
+    \echo 'Test 3: Subtree for organization (ID 11, depth 3)'
+    test_xml := generate_xml_from_tree(11, 3);
+    -- Check that the root of the result is the correct node
+    test_result := xpath_exists('/organization[@id="11"]', test_xml);
+    ASSERT test_result, 'FAIL: Root node is not Bob Johnson (ID 11).';
+    -- Check for a leaf in this subtree
+    test_result := xpath_exists('//organization[@id="13"]', test_xml);
+    ASSERT test_result, 'FAIL: Leaf node Diana Prince not found in subtree.';
+    \echo '[PASS] Test 3 completed.' ;
+
+    -- Test 4: Single node result (depth 1)
+    \echo 'Test 4: Single node result (ID 22, depth 1)'
+    test_xml := generate_xml_from_tree(22, 1);
+    -- Check that the result is a single element with no children
+    test_result := xpath_exists('/app_config[@id="22" and not(*)]', test_xml);
+    ASSERT test_result, 'FAIL: Result should be a single node with no children.';
+    \echo '[PASS] Test 4 completed.' ;
+
+    -- Test 5: Non-existent node ID
+    \echo 'Test 5: Non-existent start node ID (ID 999, depth 3)'
+    test_xml := generate_xml_from_tree(999, 3);
+    ASSERT test_xml IS NULL, 'FAIL: Result for a non-existent node should be NULL.';
+    \echo '[PASS] Test 5 completed.' ;
+
+END $$;
+
+\echo '--- All tests passed successfully! ---'
