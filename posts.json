@@ -16,6 +16,14 @@
     "readingTime": 10
   },
   {
+    "title": "Learning Zig with AI-assisted experiments",
+    "date": "2026-06-15",
+    "tag": "Zig",
+    "excerpt": "Inspired by a Zig talk, I used AI to bootstrap a set of small hands-on examples, then refined them manually. Notes on what worked, what AI helped with, and why Zig feels practical.",
+    "path": "2026/06/15",
+    "readingTime": 4
+  },
+  {
     "title": "AI-generated HTML games: Tetris and Bomberman in a single file",
     "date": "2026-04-25",
     "tag": "AI",
